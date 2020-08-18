@@ -404,7 +404,6 @@ dlg:file{ id="picker",
           title="animimation tag importer",
           load=true,
           open=true,
-          save=false,
           filename="",
           filetypes={ "json" },
           onchange=function() 
