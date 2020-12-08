@@ -425,8 +425,8 @@ dlg:file{ id="picker",
              -- import all the frame tags
             for index, tag_data in pairs(jsondata.meta.frameTags) do
               local name = tag_data.name
-              local from = tag_data.from
-              local to = tag_data.to
+              local from = tag_data.from + 1
+              local to = tag_data.to + 1
               local direction = tag_data.direction
 
               -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file 
