@@ -22,4 +22,5 @@ Instructions:
 ## jest_import_packed_atlas
 1. Make sure the current tab selected is the sprite packed in a texture atlas
 2. Select the corresponding json file associated with it
+
 note: if you see all the colors wrong, you did not have the texture atlas sprite active.
