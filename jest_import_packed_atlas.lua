@@ -395,8 +395,8 @@ end
 local function draw_section(src_img, dest_img, src_rect, dest_rect, palette)
     local frame = src_rect
     local source = dest_rect
-    for y = 0, frame.h, 1 do
-        for x = 0, frame.w, 1 do
+    for y = 0, frame.h - 1, 1 do
+        for x = 0, frame.w - 1, 1 do
             local src_x = frame.x + x
             local src_y = frame.y + y
             local color_or_index = src_img:getPixel(src_x, src_y)
@@ -444,6 +444,9 @@ dlg:file{
             local frame = new_sprite:newFrame()
             local dest_img = new_sprite.cels[index].image
             draw_section(image, dest_img, src_loc, place_loc, sprite.palettes[1])
+            if aframe.duration ~= nil then
+                frame.duration = aframe.duration / 1000
+            end
         end
         dlg:close()
     end
