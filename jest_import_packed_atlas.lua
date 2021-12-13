@@ -366,6 +366,7 @@ end
 
 --[[
     jest_import_packed_atlas
+    NOTE: JSON HASH IS NOT SUPPORTED, EXPORT JSON ARRAY INSTEAD
     This script IMPORTS packed sprites, e,g texture atlases, back into their original form as if they were never packed. Just open the png file up as the current tab, select the corresponding json and done. 
 
     If you see all white colors, it means you didn't have the packed sprite selected as the current tab when running this script 
