@@ -437,17 +437,20 @@ dlg:file{
         local image = app.activeImage
         local sprite = app.activeSprite
         local og_size = jsondata.frames[1].sourceSize
-        local new_sprite = Sprite(og_size.w, og_size.h)  
+        local new_sprite = Sprite(og_size.w, og_size.h)
+        local frame = new_sprite.frames[1]
         for index, aframe in pairs(jsondata.frames) do
             local src_loc = aframe.frame
             local place_loc = aframe.spriteSourceSize
-            local frame = new_sprite:newFrame()
             local dest_img = new_sprite.cels[index].image
+            frame = new_sprite:newFrame()
             draw_section(image, dest_img, src_loc, place_loc, sprite.palettes[1])
             if aframe.duration ~= nil then
-                frame.duration = aframe.duration / 1000
+                frame.previous.duration = aframe.duration / 1000
             end
         end
+        -- # is the length operator
+        new_sprite:deleteFrame(#new_sprite.frames)
         dlg:close()
     end
 }:show()
