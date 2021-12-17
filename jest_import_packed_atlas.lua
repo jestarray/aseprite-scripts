@@ -366,8 +366,10 @@ end
 
 --[[
     jest_import_packed_atlas
-    NOTE: JSON HASH IS NOT SUPPORTED, EXPORT JSON ARRAY INSTEAD
-    This script IMPORTS packed sprites, e,g texture atlases, back into their original form as if they were never packed. Just open the png file up as the current tab, select the corresponding json and done. 
+    Useful in case you lose your ASE file and only have the output .png & .json files
+    This script IMPORTS packed sprites, e,g texture atlases, or exports from aseprite, back into their original form.
+    Just open the png file up as the current tab, select the corresponding json and done. 
+    It will also import tags if they exist in the json file
 
     If you see all white colors, it means you didn't have the packed sprite selected as the current tab when running this script 
 
@@ -413,6 +415,27 @@ local function draw_section(src_img, dest_img, src_rect, dest_rect, palette)
     end
 end
 
+-- takes in jsondata.frames
+local function jhash_to_jarray(hash)
+    local res = {}
+    for key, obj in pairs(hash) do
+        obj["filename"] = key
+        table.insert(res, obj)
+    end
+    return res
+end
+
+local function is_array(hash)
+    local res = false
+    for key, obj in pairs(hash) do
+        if type(key) == "number" then
+            res = true
+            break
+        end
+    end
+    return res
+end
+
 local dlg = Dialog()
 dlg:file{
     id = "picker",
@@ -436,6 +459,11 @@ dlg:file{
 
         local image = app.activeImage
         local sprite = app.activeSprite
+        if not is_array(jsondata.frames) then
+            -- convert it so we can use it as an array
+            jsondata.frames = jhash_to_jarray(jsondata.frames)
+        end
+
         local og_size = jsondata.frames[1].sourceSize
         local new_sprite = Sprite(og_size.w, og_size.h)
         local frame = new_sprite.frames[1]
@@ -449,8 +477,31 @@ dlg:file{
                 frame.previous.duration = aframe.duration / 1000
             end
         end
-        -- # is the length operator
+        -- # is the length operator, delete the extra empty frame
         new_sprite:deleteFrame(#new_sprite.frames)
+
+        -- IMPORTING FRAME TAGS
+        for index, tag_data in pairs(jsondata.meta.frameTags) do
+            local name = tag_data.name
+            local from = tag_data.from + 1
+            local to = tag_data.to + 1
+            local direction = tag_data.direction
+
+            -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file 
+
+            local new_tag = new_sprite:newTag(from, to)
+            new_tag.name = name
+            new_tag.aniDir = direction
+
+        end
+
+        for index, frame_data in pairs(jsondata.frames) do
+            local duration = frame_data.duration
+
+            local current_frame = app.activeFrame
+            current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
+            app.command.GoToNextFrame()
+        end
         dlg:close()
     end
 }:show()
