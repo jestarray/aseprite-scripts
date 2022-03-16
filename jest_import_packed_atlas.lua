@@ -481,7 +481,8 @@ dlg:file{
         new_sprite:deleteFrame(#new_sprite.frames)
 
         -- IMPORTING FRAME TAGS
-        for index, tag_data in pairs(jsondata.meta.frameTags) do
+        if jsondata.meta ~= nil and jsondata.meta.frameTags then 
+         for index, tag_data in pairs(jsondata.meta.frameTags) do
             local name = tag_data.name
             local from = tag_data.from + 1
             local to = tag_data.to + 1
@@ -493,15 +494,26 @@ dlg:file{
             new_tag.name = name
             new_tag.aniDir = direction
 
+        end       
         end
 
+
         for index, frame_data in pairs(jsondata.frames) do
+            if frame_data.duration then
             local duration = frame_data.duration
 
             local current_frame = app.activeFrame
             current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
             app.command.GoToNextFrame()
+            end
         end
+
+        -- FIXES CEL BOUNDS FROM BEING INCORRECT https://github.com/aseprite/aseprite/issues/3206 
+    app.command.CanvasSize {
+    ui = false,
+    left = 0, top = 0,
+    right = 0, bottom = 0,
+    trimOutside = true }
         dlg:close()
     end
 }:show()
