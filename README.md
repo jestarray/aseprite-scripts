@@ -1,7 +1,5 @@
 # aseprite-scripts
 
-Scripts:
-
 ## jest_import_existing_tags (also imports frame durations)
 Video(SCRIPT RE-NAMED TO jest_import_existing_tags): (https://6-28.mastodon.xyz/media_attachments/files/014/003/934/original/be68e70a2fc7c855.mp4)
 
