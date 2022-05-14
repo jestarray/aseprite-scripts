@@ -20,7 +20,16 @@ Instructions:
 2. In aseprite menu go to: File > Scripts > jest_merge_all_tabs , and it will merge everything into 1 sprite
 
 ## jest_import_packed_atlas
+Video: https://youtu.be/XVnEURlY_Do
+
+NOTE: This does not work with rotated atlases
+
 1. Make sure the current tab selected is the sprite packed in a texture atlas
 2. Select the corresponding json file associated with it
+
+This script can also be ran via cli:
+```
+aseprite.exe <SPRITE.png> --script-param json="C:\SPRITE.json" --script jest_import_packed_atlas.lua --save-as <RES.ase> --batch
+```
 
 note: if you see all the colors wrong, you did not have the texture atlas sprite active.
