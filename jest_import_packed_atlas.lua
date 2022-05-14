@@ -369,7 +369,36 @@ end
     Useful in case you lose your ASE file and only have the output .png & .json files
     This script IMPORTS packed sprites, e,g texture atlases, or exports from aseprite, back into their original form.
     Just open the png file up as the current tab, select the corresponding json and done. 
+    !!WARNING: PROBABLY DOES NOT SUPPORT ROTATED TEXTURE ATLASES!!
     It will also import tags if they exist in the json file
+
+    This script also has CLI support so you can mass convert your texture atlases:
+    aseprite.exe <SPRITE.png> --script-param json="C:\SPRITE.json" --script jest_import_packed_atlas.lua --save-as <RES.ase> --batch
+
+    Your .json file can be either in array form, e.g:
+
+{"frames": [
+    {
+        "filename": "Green Flash"
+        "frame": {"x":1,"y":1,"w":31,"h":301},
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {"x":0,"y":0,"w":31,"h":301},
+        "sourceSize": {"w":31,"h":301
+    }
+]}
+
+or hash form:
+
+{"frames": {
+    "Green Flash":
+    {
+        "frame": {"x":1,"y":1,"w":31,"h":301},
+        "rotated": false,
+        "trimmed": false,
+        "spriteSourceSize": {"x":0,"y":0,"w":31,"h":301},
+        "sourceSize": {"w":31,"h":301}
+}}}
 
     If you see all white colors, it means you didn't have the packed sprite selected as the current tab when running this script 
 
@@ -394,6 +423,7 @@ local function split(str, sep)
 end
 
 -- Image, Image, Rect, Rect, palette
+-- src and dest are image classes
 local function draw_section(src_img, dest_img, src_rect, dest_rect, palette)
     local frame = src_rect
     local source = dest_rect
@@ -404,10 +434,17 @@ local function draw_section(src_img, dest_img, src_rect, dest_rect, palette)
             local color_or_index = src_img:getPixel(src_x, src_y)
             local color;
             if src_img.colorMode == ColorMode.INDEXED then
-                color = palette:getColor(color_or_index)
+                -- fixes greenish artifacts when importing from an indexed file: https://discord.com/channels/324979738533822464/324979738533822464/975147445564604416
+                -- because indexed sprites have a special index as the transparent color: https://www.aseprite.org/docs/color-mode/#indexed
+                if color_or_index ~= src_img.spec.transparentColor then
+                    color = palette:getColor(color_or_index)
+                else
+                    color = Color {r = 0, g = 0, b = 0, a = 0}
+                end
             else
                 color = color_or_index
             end
+            -- DEPENDS ON THE COLOR MODE, MAKE SURE ITS NOT INDEXED, if indexed, grab the index coolor from the pallete, otherwise it is the color
             local dest_x = source.x + x
             local dest_y = source.y + y
             dest_img:drawPixel(dest_x, dest_y, color)
@@ -422,6 +459,8 @@ local function jhash_to_jarray(hash)
         obj["filename"] = key
         table.insert(res, obj)
     end
+    table.sort(res,
+               function(a, b) return a.filename < b.filename end)
     return res
 end
 
@@ -466,6 +505,8 @@ dlg:file{
 
         local og_size = jsondata.frames[1].sourceSize
         local new_sprite = Sprite(og_size.w, og_size.h)
+        new_sprite:setPalette(sprite.palettes[1])
+
         local frame = new_sprite.frames[1]
         for index, aframe in pairs(jsondata.frames) do
             local src_loc = aframe.frame
