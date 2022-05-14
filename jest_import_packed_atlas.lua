@@ -1,6 +1,4 @@
-local json = {
-    _version = "0.1.1"
-}
+local json = {_version = "0.1.1"}
 
 -------------------------------------------------------------------------------
 -- Encode
@@ -18,29 +16,21 @@ local escape_char_map = {
     ["\t"] = "\\t"
 }
 
-local escape_char_map_inv = {
-    ["\\/"] = "/"
-}
-for k, v in pairs(escape_char_map) do
-    escape_char_map_inv[v] = k
-end
+local escape_char_map_inv = {["\\/"] = "/"}
+for k, v in pairs(escape_char_map) do escape_char_map_inv[v] = k end
 
 local function escape_char(c)
     return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
-local function encode_nil(val)
-    return "null"
-end
+local function encode_nil(val) return "null" end
 
 local function encode_table(val, stack)
     local res = {}
     stack = stack or {}
 
     -- Circular reference?
-    if stack[val] then
-        error("circular reference")
-    end
+    if stack[val] then error("circular reference") end
 
     stack[val] = true
 
@@ -53,13 +43,9 @@ local function encode_table(val, stack)
             end
             n = n + 1
         end
-        if n ~= #val then
-            error("invalid table: sparse array")
-        end
+        if n ~= #val then error("invalid table: sparse array") end
         -- Encode
-        for i, v in ipairs(val) do
-            table.insert(res, encode(v, stack))
-        end
+        for i, v in ipairs(val) do table.insert(res, encode(v, stack)) end
         stack[val] = nil
         return "[" .. table.concat(res, ",") .. "]"
 
@@ -99,15 +85,11 @@ local type_func_map = {
 encode = function(val, stack)
     local t = type(val)
     local f = type_func_map[t]
-    if f then
-        return f(val, stack)
-    end
+    if f then return f(val, stack) end
     error("unexpected type '" .. t .. "'")
 end
 
-function json.encode(val)
-    return (encode(val))
-end
+function json.encode(val) return (encode(val)) end
 
 -------------------------------------------------------------------------------
 -- Decode
@@ -117,9 +99,7 @@ local parse
 
 local function create_set(...)
     local res = {}
-    for i = 1, select("#", ...) do
-        res[select(i, ...)] = true
-    end
+    for i = 1, select("#", ...) do res[select(i, ...)] = true end
     return res
 end
 
@@ -128,18 +108,10 @@ local delim_chars = create_set(" ", "\t", "\r", "\n", "]", "}", ",")
 local escape_chars = create_set("\\", "/", '"', "b", "f", "n", "r", "t", "u")
 local literals = create_set("true", "false", "null")
 
-local literal_map = {
-    ["true"] = true,
-    ["false"] = false,
-    ["null"] = nil
-}
+local literal_map = {["true"] = true, ["false"] = false, ["null"] = nil}
 
 local function next_char(str, idx, set, negate)
-    for i = idx, #str do
-        if set[str:sub(i, i)] ~= negate then
-            return i
-        end
-    end
+    for i = idx, #str do if set[str:sub(i, i)] ~= negate then return i end end
     return #str + 1
 end
 
@@ -164,9 +136,11 @@ local function codepoint_to_utf8(n)
     elseif n <= 0x7ff then
         return string.char(f(n / 64) + 192, n % 64 + 128)
     elseif n <= 0xffff then
-        return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
+        return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128,
+                           n % 64 + 128)
     elseif n <= 0x10ffff then
-        return string.char(f(n / 262144) + 240, f(n % 262144 / 4096) + 128, f(n % 4096 / 64) + 128, n % 64 + 128)
+        return string.char(f(n / 262144) + 240, f(n % 262144 / 4096) + 128,
+                           f(n % 4096 / 64) + 128, n % 64 + 128)
     end
     error(string.format("invalid unicode codepoint '%x'", n))
 end
@@ -176,7 +150,8 @@ local function parse_unicode_escape(s)
     local n2 = tonumber(s:sub(9, 12), 16)
     -- Surrogate pair?
     if n2 then
-        return codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
+        return
+            codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
     else
         return codepoint_to_utf8(n1)
     end
@@ -208,7 +183,8 @@ local function parse_string(str, i)
             else
                 local c = string.char(x)
                 if not escape_chars[c] then
-                    decode_error(str, j, "invalid escape char '" .. c .. "' in string")
+                    decode_error(str, j,
+                                 "invalid escape char '" .. c .. "' in string")
                 end
                 has_escape = true
             end
@@ -222,9 +198,7 @@ local function parse_string(str, i)
             if has_unicode_escape then
                 s = s:gsub("\\u....", parse_unicode_escape)
             end
-            if has_escape then
-                s = s:gsub("\\.", escape_char_map_inv)
-            end
+            if has_escape then s = s:gsub("\\.", escape_char_map_inv) end
             return s, j + 1
 
         else
@@ -238,9 +212,7 @@ local function parse_number(str, i)
     local x = next_char(str, i, delim_chars)
     local s = str:sub(i, x - 1)
     local n = tonumber(s)
-    if not n then
-        decode_error(str, i, "invalid number '" .. s .. "'")
-    end
+    if not n then decode_error(str, i, "invalid number '" .. s .. "'") end
     return n, x
 end
 
@@ -273,12 +245,8 @@ local function parse_array(str, i)
         i = next_char(str, i, space_chars, true)
         local chr = str:sub(i, i)
         i = i + 1
-        if chr == "]" then
-            break
-        end
-        if chr ~= "," then
-            decode_error(str, i, "expected ']' or ','")
-        end
+        if chr == "]" then break end
+        if chr ~= "," then decode_error(str, i, "expected ']' or ','") end
     end
     return res, i
 end
@@ -313,12 +281,8 @@ local function parse_object(str, i)
         i = next_char(str, i, space_chars, true)
         local chr = str:sub(i, i)
         i = i + 1
-        if chr == "}" then
-            break
-        end
-        if chr ~= "," then
-            decode_error(str, i, "expected '}' or ','")
-        end
+        if chr == "}" then break end
+        if chr ~= "," then decode_error(str, i, "expected '}' or ','") end
     end
     return res, i
 end
@@ -346,9 +310,7 @@ local char_func_map = {
 parse = function(str, idx)
     local chr = str:sub(idx, idx)
     local f = char_func_map[chr]
-    if f then
-        return f(str, idx)
-    end
+    if f then return f(str, idx) end
     decode_error(str, idx, "unexpected character '" .. chr .. "'")
 end
 
@@ -358,9 +320,7 @@ function json.decode(str)
     end
     local res, idx = parse(str, next_char(str, 1, space_chars, true))
     idx = next_char(str, idx, space_chars, true)
-    if idx <= #str then
-        decode_error(str, idx, "trailing garbage")
-    end
+    if idx <= #str then decode_error(str, idx, "trailing garbage") end
     return res
 end
 
@@ -416,9 +376,7 @@ or hash form:
 local function split(str, sep)
     local result = {}
     local regex = ("([^%s]+)"):format(sep)
-    for each in str:gmatch(regex) do
-        table.insert(result, each)
-    end
+    for each in str:gmatch(regex) do table.insert(result, each) end
     return result
 end
 
@@ -459,8 +417,7 @@ local function jhash_to_jarray(hash)
         obj["filename"] = key
         table.insert(res, obj)
     end
-    table.sort(res,
-               function(a, b) return a.filename < b.filename end)
+    table.sort(res, function(a, b) return a.filename < b.filename end)
     return res
 end
 
@@ -522,39 +479,41 @@ dlg:file{
         new_sprite:deleteFrame(#new_sprite.frames)
 
         -- IMPORTING FRAME TAGS
-        if jsondata.meta ~= nil and jsondata.meta.frameTags then 
-         for index, tag_data in pairs(jsondata.meta.frameTags) do
-            local name = tag_data.name
-            local from = tag_data.from + 1
-            local to = tag_data.to + 1
-            local direction = tag_data.direction
+        if jsondata.meta ~= nil and jsondata.meta.frameTags then
+            for index, tag_data in pairs(jsondata.meta.frameTags) do
+                local name = tag_data.name
+                local from = tag_data.from + 1
+                local to = tag_data.to + 1
+                local direction = tag_data.direction
 
-            -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file 
+                -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file 
 
-            local new_tag = new_sprite:newTag(from, to)
-            new_tag.name = name
-            new_tag.aniDir = direction
+                local new_tag = new_sprite:newTag(from, to)
+                new_tag.name = name
+                new_tag.aniDir = direction
 
-        end       
+            end
         end
-
 
         for index, frame_data in pairs(jsondata.frames) do
             if frame_data.duration then
-            local duration = frame_data.duration
+                local duration = frame_data.duration
 
-            local current_frame = app.activeFrame
-            current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
-            app.command.GoToNextFrame()
+                local current_frame = app.activeFrame
+                current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
+                app.command.GoToNextFrame()
             end
         end
 
         -- FIXES CEL BOUNDS FROM BEING INCORRECT https://github.com/aseprite/aseprite/issues/3206 
-    app.command.CanvasSize {
-    ui = false,
-    left = 0, top = 0,
-    right = 0, bottom = 0,
-    trimOutside = true }
+        app.command.CanvasSize {
+            ui = false,
+            left = 0,
+            top = 0,
+            right = 0,
+            bottom = 0,
+            trimOutside = true
+        }
         dlg:close()
     end
 }:show()
