@@ -333,7 +333,11 @@ end
     It will also import tags if they exist in the json file
 
     This script also has CLI support so you can mass convert your texture atlases:
-    aseprite.exe <SPRITE.png> --script-param json="C:\SPRITE.json" --script jest_import_packed_atlas.lua --save-as <RES.ase> --batch
+    NOTE THAT PATHS MUST BE ABSOLUTE, EG:
+    WARNING! IT WILL SAVE IN THE SAME DIRECTORY AS THE PNG FILE! Becareful if you already have an .ase file in the same directory with the same name as the .png
+    '--save-as' flag DOES NOT WORK and I'm too lazy to add an export script-param var
+    png & json paths don't have to be absolute but script path has to, at least these are my problems. Use all absolute paths if you are having issues
+    aseprite.exe <C:\SPRITE.png> --script-param json="C:\SPRITE.json" --script "C:\jest_import_packed_atlas.lua" --batch
 
     Your .json file can be either in array form, e.g:
 
@@ -432,88 +436,122 @@ local function is_array(hash)
     return res
 end
 
-local dlg = Dialog()
-dlg:file{
-    id = "picker",
-    label = "select animation data file(json)",
-    title = "animimation tag importer",
-    load = true,
-    open = true,
-    filename = "",
-    filetypes = {"json"},
-    onchange = function()
-        local filepath = dlg.data.picker -- matches id name
-        local f = io.open(filepath, "r+"):read('a')
-        local jsondata = json.decode(f)
+local function build(filepath)
+    local f = io.open(filepath, "r+"):read('a')
+    local jsondata = json.decode(f)
 
-        if jsondata == nil then
-            print("could not load file " .. filepath)
-            print("check your json file for errors")
+    if jsondata == nil then
+        print("could not load file " .. filepath)
+        print("check your json file for errors")
 
-            return 1
-        end
-
-        local image = app.activeImage
-        local sprite = app.activeSprite
-        if not is_array(jsondata.frames) then
-            -- convert it so we can use it as an array
-            jsondata.frames = jhash_to_jarray(jsondata.frames)
-        end
-
-        local og_size = jsondata.frames[1].sourceSize
-        local new_sprite = Sprite(og_size.w, og_size.h)
-        new_sprite:setPalette(sprite.palettes[1])
-
-        local frame = new_sprite.frames[1]
-        for index, aframe in pairs(jsondata.frames) do
-            local src_loc = aframe.frame
-            local place_loc = aframe.spriteSourceSize
-            local dest_img = new_sprite.cels[index].image
-            frame = new_sprite:newFrame()
-            draw_section(image, dest_img, src_loc, place_loc, sprite.palettes[1])
-            if aframe.duration ~= nil then
-                frame.previous.duration = aframe.duration / 1000
-            end
-        end
-        -- # is the length operator, delete the extra empty frame
-        new_sprite:deleteFrame(#new_sprite.frames)
-
-        -- IMPORTING FRAME TAGS
-        if jsondata.meta ~= nil and jsondata.meta.frameTags then
-            for index, tag_data in pairs(jsondata.meta.frameTags) do
-                local name = tag_data.name
-                local from = tag_data.from + 1
-                local to = tag_data.to + 1
-                local direction = tag_data.direction
-
-                -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file 
-
-                local new_tag = new_sprite:newTag(from, to)
-                new_tag.name = name
-                new_tag.aniDir = direction
-
-            end
-        end
-
-        for index, frame_data in pairs(jsondata.frames) do
-            if frame_data.duration then
-                local duration = frame_data.duration
-
-                local current_frame = app.activeFrame
-                current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
-                app.command.GoToNextFrame()
-            end
-        end
-
-        -- FIXES CEL BOUNDS FROM BEING INCORRECT https://github.com/aseprite/aseprite/issues/3206 
-        app.command.CanvasSize {
-            ui = false,
-            left = 0,
-            top = 0,
-            right = 0,
-            bottom = 0,
-            trimOutside = true
-        }
-        dlg:close()
+        return 1
     end
-}:show()
+
+    local image = app.activeImage
+    local sprite = app.activeSprite
+    if not is_array(jsondata.frames) then
+        -- convert it so we can use it as an array
+        jsondata.frames = jhash_to_jarray(jsondata.frames)
+    end
+
+    local og_size = jsondata.frames[1].sourceSize
+    local new_sprite = Sprite(og_size.w, og_size.h)
+    new_sprite.filename = app.fs.fileTitle(filepath);
+    new_sprite:setPalette(sprite.palettes[1])
+
+    local frame = new_sprite.frames[1]
+    for index, aframe in pairs(jsondata.frames) do
+        local src_loc = aframe.frame
+        local place_loc = aframe.spriteSourceSize
+        local dest_img = new_sprite.cels[index].image
+        frame = new_sprite:newFrame()
+        draw_section(image, dest_img, src_loc, place_loc, sprite.palettes[1])
+        if aframe.duration ~= nil then
+            frame.previous.duration = aframe.duration / 1000
+        end
+    end
+    -- # is the length operator, delete the extra empty frame
+    new_sprite:deleteFrame(#new_sprite.frames)
+
+    -- IMPORTING FRAME TAGS
+    if jsondata.meta ~= nil and jsondata.meta.frameTags then
+        for index, tag_data in pairs(jsondata.meta.frameTags) do
+            local name = tag_data.name
+            local from = tag_data.from + 1
+            local to = tag_data.to + 1
+            local direction = tag_data.direction
+
+            -- seems like exporting tags does not export their colors so no way to import them until aseprite starts exporting color of a tag in the output json file  
+
+            local new_tag = new_sprite:newTag(from, to)
+            new_tag.name = name
+            new_tag.aniDir = direction
+
+        end
+    end
+
+    for index, frame_data in pairs(jsondata.frames) do
+        if frame_data.duration then
+            local duration = frame_data.duration
+
+            local current_frame = app.activeFrame
+            current_frame.duration = duration / 1000 -- duraction in the editor is in seconds, e.g 0.1
+            app.command.GoToNextFrame()
+        end
+    end
+
+    -- FIXES CEL BOUNDS FROM BEING INCORRECT https://github.com/aseprite/aseprite/issues/3206 
+    app.command.CanvasSize {
+        ui = false,
+        left = 0,
+        top = 0,
+        right = 0,
+        bottom = 0,
+        trimOutside = true
+    }
+end
+
+local JKEY = "json"
+local from_cli_json_path = app.params[JKEY]
+
+if from_cli_json_path ~= nil then
+    build(from_cli_json_path)
+
+    -- weirdly filename must also have extension despite specifing it in 'filename-format' below
+    local name = app.fs.filePathAndTitle(from_cli_json_path) .. ".ase"
+    app.command.saveFileAs {["filename"] = name, ["filename-format"] = ".ase"}
+else
+    local dlg = Dialog()
+
+    local PICKER = "picker"
+    local sprite = app.activeSprite
+
+    if sprite == nil then
+        print("you are not viewing a sprite on the active tab")
+        return 1
+    end
+
+    -- tries to guess that the png & json are in the same directory
+    local json_filepath = app.fs.filePathAndTitle(sprite.filename) .. ".json"
+    local exists_in_same_dir = app.fs.isFile(json_filepath)
+    if exists_in_same_dir == false then
+        json_filepath = "" -- not in same dir, look for it yourself
+    end
+
+    dlg:file{
+        id = PICKER,
+        label = "select animation data file(json)",
+        title = "animimation tag importer",
+        load = true,
+        open = true,
+        filename = json_filepath,
+        filetypes = {"json"}
+    }:button{
+        id = "Ok",
+        text = "Ok",
+        onclick = function()
+            build(dlg.data[PICKER])
+            dlg:close()
+        end
+    }:show()
+end

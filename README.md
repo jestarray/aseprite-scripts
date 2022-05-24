@@ -27,7 +27,9 @@ NOTE: This does not work with rotated atlases
 
 This script can also be ran via cli:
 ```
-aseprite.exe <SPRITE.png> --script-param json="C:\SPRITE.json" --script jest_import_packed_atlas.lua --save-as <RES.ase> --batch
+// png and json file don't have to be aboslute paths but script file most likely need absolute path. If it doesn't work just use absolute paths
+
+aseprite.exe <C:\SPRITE.png> --script-param json="C:\SPRITE.json" --script "C:\jest_import_packed_atlas.lua" --batch
 ```
 
 note: if you see all the colors wrong, you did not have the texture atlas sprite active.

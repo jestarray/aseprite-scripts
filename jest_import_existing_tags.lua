@@ -398,7 +398,6 @@ end
 
 -- start main
 local dlg = Dialog()
--- TODO(jest): file picker always unnecessarily asks to overwrite json file. The json file never gets modified. Find a way to fix this
 dlg:file{ id="picker",
           label="select animation data file(json)",
           title="animimation tag importer",
